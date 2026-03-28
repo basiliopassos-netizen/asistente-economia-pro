@@ -4,74 +4,88 @@ from PIL import Image
 import pytesseract
 import re
 
-# Configuración de la página
-st.set_page_config(page_title="PocketAdmin - Economía Doméstica", page_icon="🏦", layout="wide")
+# Configuración avanzada
+st.set_page_config(page_title="PocketAdmin Pro - Inteligencia Financiera", layout="wide")
 
-# --- FUNCIONES DE APOYO ---
-def extraer_total(texto):
-    """Intenta buscar un número que parezca el total del ticket"""
-    precios = re.findall(r'\d+[\.,]\d{2}', texto)
-    if precios:
-        # Convertimos a float para poder operar
-        precios_float = [float(p.replace(',', '.')) for p in precios]
-        return max(precios_float) # Normalmente el importe más alto es el total
-    return 0.0
+# --- DICCIONARIO INTELIGENTE (El cerebro que clasifica ítems) ---
+CATEGORIAS_PRODUCTOS = {
+    "Saludable": ["manzana", "pera", "verdura", "pollo", "pescado", "agua", "leche"],
+    "Caprichos/Fugas": ["chuches", "gominolas", "patatas", "refresco", "coca", "cerveza", "alcohol", "chocolate", "bolleria"],
+    "Higiene/Cosmética": ["champu", "gel", "crema", "desodorante", "jabon", "pasta dent"]
+}
+
+def analizar_lineas_ticket(texto_bruto):
+    """Analiza línea por línea el ticket para separar productos y precios"""
+    lineas = texto_bruto.split('\n')
+    productos_detectados = []
+    
+    for linea in lineas:
+        # Buscamos algo que parezca un precio (ej: 2.50 o 2,50)
+        precio_match = re.search(r'(\d+[\.,]\d{2})', linea)
+        if precio_match:
+            precio = float(precio_match.group(1).replace(',', '.'))
+            # El resto de la línea suele ser el nombre del producto
+            nombre = linea.replace(precio_match.group(1), "").strip()
+            
+            if len(nombre) > 3: # Evitamos ruidos cortos
+                # Clasificación automática por palabras clave
+                categoria = "Otros"
+                nombre_min = nombre.lower()
+                for cat, palabras in CATEGORIAS_PRODUCTOS.items():
+                    if any(p in nombre_min for p in palabras):
+                        categoria = cat
+                        break
+                
+                productos_detectados.append([nombre, categoria, precio])
+    
+    return productos_detectados
 
 # --- INTERFAZ ---
 def main():
-    st.title("🏦 PocketAdmin Pro")
-    st.subheader("Tu asistente inteligente de microeconomía")
+    st.title("🏦 PocketAdmin: Analizador de Ticket Detallado")
+    
+    if 'base_datos' not in st.session_state:
+        st.session_state.base_datos = pd.DataFrame(columns=['Producto', 'Categoría', 'Precio'])
 
-    menu = ["📊 Dashboard General", "📸 Escanear Ticket", "📂 Importar PDF/Excel", "💡 Recomendaciones"]
-    choice = st.sidebar.selectbox("Menú Principal", menu)
+    col1, col2 = st.columns([1, 1])
 
-    # Inicializar una base de datos temporal en la sesión
-    if 'mis_gastos' not in st.session_state:
-        st.session_state.mis_gastos = pd.DataFrame(columns=['Fecha', 'Concepto', 'Categoría', 'Importe'])
-
-    if choice == "📊 Dashboard General":
-        st.info("Aquí verás el resumen de tus finanzas.")
-        if not st.session_state.mis_gastos.empty:
-            st.write(st.session_state.mis_gastos)
-            total = st.session_state.mis_gastos['Importe'].sum()
-            st.metric("Gasto Total Acumulado", f"{total} €")
-        else:
-            st.warning("Aún no hay datos. ¡Ve a la sección de escáner!")
-
-    elif choice == "📸 Escanear Ticket":
-        st.header("📸 Escáner de Tickets Inteligente")
-        archivo_foto = st.file_uploader("Sube una foto de tu ticket", type=['jpg', 'jpeg', 'png'])
-
-        if archivo_foto:
-            img = Image.open(archivo_foto)
-            st.image(img, caption="Imagen cargada", width=400)
+    with col1:
+        st.header("📸 Escanear Compra")
+        archivo = st.file_uploader("Sube el ticket del súper", type=['jpg', 'png', 'jpeg'])
+        
+        if archivo:
+            img = Image.open(archivo)
+            st.image(img, width=300)
             
-            if st.button("🚀 Procesar Ticket"):
-                with st.spinner("Analizando texto con IA..."):
-                    # Extraer texto (OCR)
-                    texto = pytesseract.image_to_string(img)
-                    importe_detectado = extraer_total(texto)
-                    
-                    st.success("¡Lectura completada!")
-                    
-                    # Formulario para confirmar datos
-                    with st.form("confirmar_gasto"):
-                        concepto = st.text_input("Establecimiento / Concepto", "Compra General")
-                        cat = st.selectbox("Categoría", ["Alimentación", "Hogar", "Ocio", "Transporte", "Otros"])
-                        monto = st.number_input("Confirmar Importe (€)", value=importe_detectado)
-                        
-                        if st.form_submit_button("Guardar en mi economía"):
-                            nuevo_gasto = pd.DataFrame([[pd.Timestamp.now().strftime("%Y-%m-%d"), concepto, cat, monto]], 
-                                                     columns=['Fecha', 'Concepto', 'Categoría', 'Importe'])
-                            st.session_state.mis_gastos = pd.concat([st.session_state.mis_gastos, nuevo_gasto], ignore_index=True)
-                            st.balloons()
-                            st.success("Gasto guardado correctamente.")
+            if st.button("🔍 Desglosar Productos"):
+                texto = pytesseract.image_to_string(img)
+                items = analizar_lineas_ticket(texto)
+                
+                if items:
+                    nuevo_df = pd.DataFrame(items, columns=['Producto', 'Categoría', 'Precio'])
+                    st.session_state.base_datos = pd.concat([st.session_state.base_datos, nuevo_df], ignore_index=True)
+                    st.success(f"He detectado {len(items)} productos individuales.")
+                else:
+                    st.error("No he podido leer los precios. Intenta con una foto más nítida.")
 
-    elif choice == "💡 Recomendaciones":
-        st.header("🔍 Análisis de Fugas y Consejos")
-        st.write("Basado en tus datos:")
-        st.markdown("* **Fuga detectada:** Has gastado un 15% más en 'Ocio' que la semana pasada.")
-        st.markdown("* **Recomendación:** Intenta reducir los gastos hormiga (cafés, suscripciones) para ahorrar 40€ este mes.")
+    with col2:
+        st.header("📊 Análisis de Gastos Reales")
+        if not st.session_state.base_datos.empty:
+            df = st.session_state.base_datos
+            
+            # Gráfico de gastos por categoría
+            resumen = df.groupby('Categoría')['Precio'].sum().reset_index()
+            st.bar_chart(resumen.set_index('Categoría'))
+            
+            # Alerta de Fugas
+            fugas = df[df['Categoría'] == "Caprichos/Fugas"]['Precio'].sum()
+            if fugas > 0:
+                st.warning(f"⚠️ **Fuga detectada:** Te has gastado {fugas:.2f}€ en productos no esenciales (caprichos).")
+            
+            st.write("### Desglose completo:")
+            st.dataframe(df, use_container_width=True)
+        else:
+            st.info("Sube un ticket para ver el desglose por productos.")
 
 if __name__ == "__main__":
     main()
