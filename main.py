@@ -7,18 +7,27 @@ from pypdf import PdfReader
 import os
 import plotly.express as px
 
-# 1. Configuración de página y Diseño CSS para juntar pestañas
-st.set_page_config(page_title="PocketAdmin: Control Total", layout="wide", page_icon="🛡️")
+# 1. Configuración de página y Estilo Visual Avanzado
+st.set_page_config(page_title="PocketAdmin Pro", layout="wide", page_icon="🧘")
 
 st.markdown("""
     <style>
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    /* Estilo para las pestañas */
+    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
     .stTabs [data-baseweb="tab"] { 
-        padding-left: 8px; 
-        padding-right: 8px; 
-        font-size: 14px; 
+        padding: 8px 15px; 
+        font-size: 16px;
+        font-weight: 500;
     }
-    .block-container { padding-top: 1.5rem; }
+    /* Tarjetas de métricas personalizadas */
+    .metric-card {
+        background-color: #f0f2f6;
+        padding: 20px;
+        border-radius: 15px;
+        border-left: 5px solid #00c0f2;
+        margin-bottom: 20px;
+    }
+    .block-container { padding-top: 1rem; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -38,19 +47,8 @@ def guardar_datos(df_nuevo):
     df_actualizado.to_csv(ARCHIVO_DATOS, index=False)
     return df_actualizado
 
-# --- MOTOR EMOCIONAL ---
-def obtener_mensaje(df, nombre, genero, modo_control):
-    adj = "lista" if genero == "Femenino" else "listo"
-    total = df['Precio'].sum() if not df.empty else 0
-    base = f"Hola, soy **{nombre}** y estoy {adj} para **cuidar de ti y de tu dinero**."
-    
-    if modo_control:
-        return f"🛡️ {base}\n\n**Modo Control:** Todo está bajo vigilancia. Llevamos **{total:.2f}€** registrados. Respira, tienes el mando."
-    else:
-        return f"🌟 {base}\n\nLlevamos un registro acumulado de **{total:.2f}€**."
-
-# --- PROCESADOR CON FILTRO ---
-PALABRAS_FILTRO = ["mastercard", "visa", "tarjeta", "total", "iva", "base imponible", "subtotal", "efectivo", "cambio", "cif", "telefono", "atendido", "ticket", "factura", "mercadona", "importe"]
+# --- MOTOR DE TEXTO ---
+PALABRAS_FILTRO = ["mastercard", "visa", "tarjeta", "total", "iva", "base imponible", "subtotal", "efectivo", "cambio", "cif", "telefono", "atendido", "ticket", "factura", "mercadona", "importe", "pago"]
 
 def analizar_texto(texto):
     lineas = texto.split('\n')
@@ -72,21 +70,37 @@ def analizar_texto(texto):
 def main():
     # Menú Lateral
     with st.sidebar:
-        st.header("⚙️ Configuración")
+        st.header("👤 Tu Perfil")
         nombre_guia = st.text_input("Asistente", value="Ana")
         genero_guia = st.selectbox("Voz", ["Femenino", "Masculino"])
-        modo_control = st.toggle("🆘 Modo Control", value=False)
-    
-    df_total = cargar_datos()
-    st.chat_message("assistant").write(obtener_mensaje(df_total, nombre_guia, genero_guia, modo_control))
+        modo_control = st.toggle("🛡️ Modo Control", value=False)
+        st.divider()
+        st.write("Configura tu experiencia para reducir el estrés financiero.")
 
-    # Pestañas Compactas
-    tab1, tab2, tab3 = st.tabs(["📥 Subir", "📊 Análisis", "📋 Historial"])
+    df_total = cargar_datos()
+    total_acumulado = df_total['Precio'].sum() if not df_total.empty else 0.0
+
+    # Cabecera Emocional
+    adj = "lista" if genero_guia == "Femenino" else "listo"
+    with st.container():
+        col_avatar, col_text = st.columns([1, 5])
+        with col_avatar:
+            st.write("# 🧘")
+        with col_text:
+            msg = f"Hola, soy **{nombre_guia}**. Estoy {adj} para **cuidar de ti y de tu dinero**."
+            if modo_control:
+                st.info(f"{msg}\n\n🛡️ **Modo Control:** Tenemos **{total_acumulado:.2f}€** bajo vigilancia total. Relájate, yo guardo los detalles.")
+            else:
+                st.success(f"{msg}\n\n🌟 Llevamos un registro de **{total_acumulado:.2f}€**.")
+
+    # Pestañas con Iconos y mejor diseño
+    tab1, tab2, tab3 = st.tabs(["📥 **Subir Tickets**", "📊 **Análisis**", "📋 **Historial**"])
 
     with tab1:
-        archivos = st.file_uploader("Sube uno o varios archivos", type=['pdf', 'jpg', 'png', 'jpeg'], accept_multiple_files=True)
+        st.markdown(f"### 📥 Registro Múltiple")
+        archivos = st.file_uploader("Puedes arrastrar varios PDFs o Fotos a la vez", type=['pdf', 'jpg', 'png', 'jpeg'], accept_multiple_files=True)
         if archivos:
-            if st.button(f"🚀 Procesar {len(archivos)} archivos"):
+            if st.button(f"🚀 Procesar {len(archivos)} archivos de golpe"):
                 todos_los_items = []
                 for archivo in archivos:
                     texto = ""
@@ -99,21 +113,26 @@ def main():
                 
                 if todos_los_items:
                     guardar_datos(pd.DataFrame(todos_los_items, columns=['Fecha', 'Producto', 'Categoría', 'Precio']))
-                    st.success("Guardado con éxito.")
+                    st.toast("¡Datos guardados con éxito!", icon='✅')
                     st.rerun()
 
     with tab2:
         if not df_total.empty:
+            st.markdown("### 📊 ¿En qué estamos invirtiendo?")
             c1, c2 = st.columns(2)
-            with c1: st.plotly_chart(px.pie(df_total, values='Precio', names='Categoría', hole=0.5, height=300), use_container_width=True)
-            with c2: st.plotly_chart(px.line(df_total.groupby('Fecha')['Precio'].sum().reset_index(), x='Fecha', y='Precio', height=300), use_container_width=True)
+            with c1:
+                st.plotly_chart(px.pie(df_total, values='Precio', names='Categoría', hole=0.5, height=350, 
+                                     color_discrete_sequence=px.colors.qualitative.Pastel), use_container_width=True)
+            with c2:
+                df_fecha = df_total.groupby('Fecha')['Precio'].sum().reset_index()
+                st.plotly_chart(px.line(df_fecha, x='Fecha', y='Precio', title="Ritmo de gasto", height=350), use_container_width=True)
         else:
-            st.info("Sube datos para ver el análisis.")
+            st.info("Aún no hay datos para analizar.")
 
     with tab3:
-        st.write("### Mi Diario")
+        st.markdown("### 📋 Mi Diario de Gastos")
         st.dataframe(df_total, use_container_width=True)
-        if st.button("🗑️ Limpiar Todo"):
+        if st.button("🗑️ Limpiar Historial"):
             if os.path.exists(ARCHIVO_DATOS): os.remove(ARCHIVO_DATOS); st.rerun()
 
 if __name__ == "__main__":
