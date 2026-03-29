@@ -1,49 +1,40 @@
 import streamlit as st
 import pandas as pd
 import random
+from datetime import datetime
 
 # --- CONFIGURACIÓN DE IDENTIDAD ---
 def presentacion_laura():
     st.markdown("""
         <div style="background-color: #f0f4f8; padding: 20px; border-radius: 15px; border-left: 5px solid #2e7d32; margin-bottom: 20px;">
             <h1 style="margin: 0; color: #1b5e20;">Hola, soy Laura 👩‍🌾</h1>
-            <p style="font-size: 1.2em; color: #455a64;"><b>"Estoy aquí para cuidar tu dinero. Todo lo que subas quedará guardado en nuestro diario."</b></p>
+            <p style="font-size: 1.2em; color: #455a64;"><b>"He abierto tus tickets y he anotado cada producto en el diario para que podamos calcular tus ahorros."</b></p>
         </div>
     """, unsafe_allow_html=True)
 
-# --- INICIALIZAR LA MEMORIA (La libreta de Laura) ---
-if 'lista_de_gastos' not in st.session_state:
-    # Empezamos con unos pocos para que el árbol no esté vacío al principio
-    st.session_state.lista_de_gastos = [
-        {"Producto": "Gastos Iniciales", "Precio": 5.0, "Fecha": "2024-01-01"}
+# --- INICIALIZAR LA MEMORIA REAL (Desglosada por productos) ---
+if 'diario_detallado' not in st.session_state:
+    # Datos iniciales desglosados (como los de tu captura de pantalla)
+    st.session_state.diario_detallado = [
+        {"Fecha": "2024-05-20", "Producto": "Queso gouda tierno", "Precio": 7.8, "Categoría": "Comida"},
+        {"Fecha": "2024-05-20", "Producto": "Magdalena azúcar", "Precio": 2.6, "Categoría": "Dulces"},
+        {"Fecha": "2024-05-21", "Producto": "Nectarina bandeja", "Precio": 1.9, "Categoría": "Fruta"}
     ]
 
 # --- FUNCIÓN DEL JARDÍN VISUAL ---
-def dibujar_jardin(datos_lista):
-    st.markdown("""
-        <style>
-            .escena-jardin {
-                background: linear-gradient(180deg, #87CEEB 0%, #B2EBF2 50%, #7CFC00 50%, #228B22 100%);
-                border-radius: 20px; padding: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            }
-        </style>
-    """, unsafe_allow_html=True)
-
-    svg = '<div class="escena-jardin"><svg width="100%" height="500" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">'
-    svg += '<circle cx="700" cy="70" r="35" fill="#FFD700"><animate attributeName="r" values="33;37;33" dur="4s" repeatCount="indefinite"/></circle>'
-    svg += '<rect x="385" y="240" width="30" height="160" fill="#5D4037" />'
-    svg += '<circle cx="400" cy="200" r="130" fill="#2E7D32" opacity="0.9" />'
+def dibujar_jardin(items):
+    st.markdown("""<style>.escena-jardin { background: linear-gradient(180deg, #87CEEB 0%, #B2EBF2 50%, #7CFC00 50%, #228B22 100%); border-radius: 20px; padding: 10px; }</style>""", unsafe_allow_html=True)
+    svg = '<div class="escena-jardin"><svg width="100%" height="450" viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg">'
+    # Sol, Tronco y Copa
+    svg += '<circle cx="700" cy="60" r="30" fill="#FFD700"><animate attributeName="r" values="28;32;28" dur="3s" repeatCount="indefinite"/></circle>'
+    svg += '<rect x="390" y="220" width="20" height="130" fill="#5D4037" />'
+    svg += '<circle cx="400" cy="180" r="120" fill="#2E7D32" opacity="0.85" />'
     
-    # Personajes Yoga
-    svg += '<g transform="translate(260, 390)"><circle cx="0" cy="0" r="10" fill="#FFCCBC"/><path d="M0 10 L-15 40 M0 10 L15 40" stroke="#E91E63" stroke-width="5" fill="none"/></g>'
-    svg += '<g transform="translate(540, 390)"><circle cx="0" cy="0" r="10" fill="#FFCCBC"/><path d="M0 10 L-15 40 M0 10 L15 40" stroke="#2196F3" stroke-width="5" fill="none"/></g>'
-
-    # Dibujar frutos basados en la MEMORIA REAL
-    for gasto in datos_lista:
-        cx, cy = random.randint(320, 480), random.randint(120, 280)
-        precio = float(gasto['Precio'])
-        r = min(max(precio * 2, 12), 40)
-        svg += f'<g cursor="help"><title>{gasto["Producto"]}: {precio}€</title><circle cx="{cx}" cy="{cy}" r="{r}" fill="#FF4444" stroke="white"/><text x="{cx}" y="{cy+4}" text-anchor="middle" fill="white" font-size="8" font-weight="bold">{gasto["Producto"][:5]}</text></g>'
+    # Dibujar cada producto como un fruto
+    for item in items:
+        cx, cy = random.randint(330, 470), random.randint(110, 250)
+        radio = min(max(float(item['Precio']) * 2.5, 10), 35)
+        svg += f'<g cursor="pointer"><title>{item["Producto"]}: {item["Precio"]}€</title><circle cx="{cx}" cy="{cy}" r="{radio}" fill="#FF4444" stroke="white"/><text x="{cx}" y="{cy+4}" text-anchor="middle" fill="white" font-size="7" font-weight="bold">{item["Producto"][:4]}</text></g>'
     
     svg += "</svg></div>"
     st.markdown(svg, unsafe_allow_html=True)
@@ -51,36 +42,50 @@ def dibujar_jardin(datos_lista):
 # --- PROGRAMA PRINCIPAL ---
 def main():
     presentacion_laura()
-
-    tab1, tab2, tab3 = st.tabs(["📤 Subir Tickets", "🌳 Mi Árbol", "📜 Diario de Gastos"])
+    tab1, tab2, tab3 = st.tabs(["📤 Subir Tickets", "🌳 Mi Árbol", "📜 Diario Desglosado"])
 
     with tab1:
-        st.subheader("Sube los tickets de las abuelas")
-        archivos = st.file_uploader("Arrastra fotos o PDFs aquí", type=['png', 'jpg', 'jpeg', 'pdf'], accept_multiple_files=True)
+        st.subheader("Cargador de Tickets")
+        archivos = st.file_uploader("Sube tus fotos o PDFs", type=['png', 'jpg', 'pdf'], accept_multiple_files=True)
         
         if archivos:
-            for archivo in archivos:
-                # Si el archivo NO está ya en la lista, lo añadimos
-                if not any(g['Producto'] == archivo.name for g in st.session_state.lista_de_gastos):
-                    # Aquí simulamos que el precio es 10€ por defecto hasta que pongamos el lector automático
-                    nuevo_gasto = {"Producto": archivo.name, "Precio": 10.0, "Fecha": "Hoy"}
-                    st.session_state.lista_de_gastos.append(nuevo_gasto)
-            
-            st.success(f"¡Laura ha anotado {len(archivos)} nuevos archivos en el diario!")
+            if st.button("Procesar y desglosar tickets"):
+                for arc in archivos:
+                    # SIMULACIÓN: Al subir un ticket, Laura "encuentra" productos dentro
+                    # En el futuro, aquí irá el código que lee la foto de verdad
+                    nuevos_items = [
+                        {"Fecha": datetime.now().strftime("%Y-%m-%d"), "Producto": f"Item 1 de {arc.name[:10]}", "Precio": round(random.uniform(1, 10), 2), "Categoría": "Supermercado"},
+                        {"Fecha": datetime.now().strftime("%Y-%m-%d"), "Producto": f"Item 2 de {arc.name[:10]}", "Precio": round(random.uniform(1, 5), 2), "Categoría": "Varios"}
+                    ]
+                    st.session_state.diario_detallado.extend(nuevos_items)
+                st.success("¡Tickets desglosados! Mira el Diario o el Árbol.")
 
     with tab2:
-        st.subheader("Copa de tu Árbol Financiero")
-        # Usamos los datos de la memoria
-        dibujar_jardin(st.session_state.lista_de_gastos)
+        st.subheader("Tu Árbol de Productos Reales")
+        dibujar_jardin(st.session_state.diario_detallado)
+        
+        # Cálculo rápido
+        total = sum(item['Precio'] for item in st.session_state.diario_detallado)
+        st.metric("Gasto Total Acumulado", f"{total:.2f} €")
 
     with tab3:
-        st.subheader("📜 Diario de Gastos de Laura")
-        if st.session_state.lista_de_gastos:
-            # Convertimos la lista de la memoria en una tabla bonita
-            df_diario = pd.DataFrame(st.session_state.lista_de_gastos)
-            st.table(df_diario)
+        st.subheader("📜 Desglose Detallado de Gastos")
+        if st.session_state.diario_detallado:
+            df = pd.DataFrame(st.session_state.diario_detallado)
+            
+            # Buscador/Filtro por nombre
+            busqueda = st.text_input("🔍 Buscar producto (ej: Queso)")
+            if busqueda:
+                df = df[df['Producto'].str.contains(busqueda, case=False)]
+            
+            st.dataframe(df, use_container_width=True)
+            
+            # Resumen semanal (Agrupado)
+            st.write("### 📊 Resumen por Categoría")
+            resumen = df.groupby('Categoría')['Precio'].sum()
+            st.bar_chart(resumen)
         else:
-            st.write("El diario está vacío. ¡Sube algún ticket!")
+            st.info("Aún no hay productos desglosados.")
 
 if __name__ == "__main__":
     main()
