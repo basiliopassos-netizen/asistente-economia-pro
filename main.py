@@ -7,23 +7,60 @@ from pypdf import PdfReader
 import os
 import plotly.express as px
 
-# 1. Configuración de página con más aire
-st.set_page_config(page_title="Mi Guía de Bienestar", layout="centered", page_icon="🌱")
+# 1. Configuración con estilo visual profundo
+st.set_page_config(page_title="Mi Guía de Bienestar", layout="centered", page_icon="🌳")
 
-# Estilo CSS para arreglar el corte de la planta y mejorar las pestañas
+# --- DISEÑO CSS PERSONALIZADO (Pestañas gorditas y tipografía) ---
 st.markdown("""
     <style>
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { padding: 8px 4px; font-size: 13px; }
-    div.block-container { padding-top: 2.5rem; } /* Más espacio arriba */
-    .stChatFloatingInputContainer { bottom: 20px; }
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital@1&family=Source+Sans+Pro:wght@300;400&display=swap');
+
+    /* Títulos con tipografía elegante */
+    h2, h3, .stSubheader {
+        font-family: 'Playfair Display', serif;
+        color: #4A5859;
+    }
+
+    /* Fondo de la app más suave */
+    .stApp {
+        background-color: #F9F7F2;
+    }
+
+    /* Pestañas estilo "Botón Gordito" */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 15px;
+        background-color: transparent;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 60px; /* Más altas */
+        background-color: #FFFFFF;
+        border-radius: 15px; /* Redondeadas */
+        border: 1px solid #E0DDCF;
+        padding: 0px 20px;
+        font-weight: 600;
+        font-size: 16px !format;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #F0EDE4;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #DDE5B6 !important; /* Color verde suave cuando está activo */
+        border: 1px solid #A9B388 !important;
+    }
+
+    /* Ajuste de la planta */
+    .planta-header {
+        font-size: 60px;
+        filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.1));
+    }
     </style>
     """, unsafe_allow_html=True)
 
 ARCHIVO_DATOS = "mis_gastos.csv"
 ARCHIVO_IDENTIDAD = "identidad.txt"
 
-# --- FUNCIONES DE PERSISTENCIA ---
+# --- FUNCIONES BASE ---
 def obtener_identidad():
     if os.path.exists(ARCHIVO_IDENTIDAD):
         with open(ARCHIVO_IDENTIDAD, "r") as f:
@@ -32,8 +69,7 @@ def obtener_identidad():
     return None
 
 def guardar_identidad(nombre, genero):
-    with open(ARCHIVO_IDENTIDAD, "w") as f:
-        f.write(f"{nombre}|{genero}")
+    with open(ARCHIVO_IDENTIDAD, "w") as f: f.write(f"{nombre}|{genero}")
 
 def cargar_datos():
     if os.path.exists(ARCHIVO_DATOS):
@@ -48,17 +84,12 @@ def guardar_datos(df_nuevo):
     df_actualizado.to_csv(ARCHIVO_DATOS, index=False)
     return df_actualizado
 
-# --- LÓGICA DE LA PLANTA (ÁRBOL/BAMBÚ) ---
 def mostrar_evolucion(df):
     num = len(df)
-    if num == 0:
-        return "🌱", "Tu semilla está lista para brotar."
-    elif num < 15:
-        return "🌿", "Tu bambú está creciendo con cada registro."
-    elif num < 40:
-        return "🎋", "¡Mira cómo sube! Tienes el control."
-    else:
-        return "🌳", "Tu árbol de bienestar ya da sombra y paz."
+    if num == 0: return "🌱", "Tu semilla está lista."
+    elif num < 15: return "🌿", "Tu bambú crece contigo."
+    elif num < 40: return "🎋", "Tienes el control absoluto."
+    else: return "🌳", "Tu árbol de paz ya te protege."
 
 # --- PROCESADOR ---
 CATEGORIAS = {
@@ -89,7 +120,7 @@ def main():
     
     if identidad is None:
         st.title("✨ Bienvenida")
-        n = st.text_input("¿Qué nombre me das para siempre?")
+        n = st.text_input("¿Qué nombre me das?")
         g = st.selectbox("Género", ["Femenino", "Masculino"])
         if st.button("Crear vínculo"):
             if n: guardar_identidad(n, g); st.rerun()
@@ -99,53 +130,49 @@ def main():
     df_total = cargar_datos()
     icono, frase = mostrar_evolucion(df_total)
     
-    # Header Compacto y Visual
-    col_texto, col_icono = st.columns([3, 1])
-    with col_texto:
+    # Header con Planta a la derecha
+    c_izq, c_der = st.columns([3, 1])
+    with c_izq:
         st.subheader(f"{nombre} & tú")
         st.caption(frase)
-    with col_icono:
-        st.markdown(f"<h1 style='font-size: 50px; margin:0;'>{icono}</h1>", unsafe_allow_html=True)
+    with c_der:
+        st.markdown(f"<div class='planta-header'>{icono}</div>", unsafe_allow_html=True)
 
-    tab1, tab2, tab3 = st.tabs(["📥 Registro", "📊 Mapa", "📖 Diario"])
+    # Pestañas Gorditas con Iconos Emocionales
+    t1, t2, t3 = st.tabs(["📥 Registro", "🧭 Mi Mapa", "📖 Mi Diario"])
 
-    with tab1:
-        archivos = st.file_uploader("Tickets (PDF/Fotos)", accept_multiple_files=True, label_visibility="collapsed")
-        if archivos:
-            if st.button(f"✨ Guardar en mi historial"):
-                items = []
-                for a in archivos:
-                    txt = ""
-                    if a.type == "application/pdf":
-                        for p in PdfReader(a).pages: txt += p.extract_text()
-                    else:
-                        txt = pytesseract.image_to_string(Image.open(a))
-                    items.extend(analizar_texto(txt))
-                if items:
-                    guardar_datos(pd.DataFrame(items, columns=['Fecha', 'Producto', 'Categoría', 'Precio']))
-                    st.success("Guardado con éxito."); st.rerun()
+    with t1:
+        archivos = st.file_uploader("", accept_multiple_files=True)
+        if archivos and st.button(f"✨ Confiar a {nombre}"):
+            items = []
+            for a in archivos:
+                txt = ""
+                if a.type == "application/pdf":
+                    for p in PdfReader(a).pages: txt += p.extract_text()
+                else:
+                    txt = pytesseract.image_to_string(Image.open(a))
+                items.extend(analizar_texto(txt))
+            if items:
+                guardar_datos(pd.DataFrame(items, columns=['Fecha', 'Producto', 'Categoría', 'Precio']))
+                st.success("Guardado."); st.rerun()
 
-    with tab2:
+    with t2:
         if not df_total.empty:
+            st.write("### Tus prioridades actuales")
             fig = px.pie(df_total, values='Precio', names='Categoría', hole=0.6, 
                          color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig.update_layout(margin=dict(t=0, b=0, l=0, r=0))
             st.plotly_chart(fig, use_container_width=True)
-        else: st.info("Sube algo para ver tu mapa.")
+        else: st.info("Sube un registro para orientarte.")
 
-    with tab3:
-        st.write("### Tu historial de pasos")
+    with t3:
+        st.write("### Pasos registrados")
         st.dataframe(df_total, use_container_width=True)
-        
-        st.divider()
-        # BOTÓN DE BORRAR DEVUELTO A SU SITIO
-        if st.button("🗑️ Borrar todo el historial"):
-            if os.path.exists(ARCHIVO_DATOS): os.remove(ARCHIVO_DATOS)
-            st.rerun()
+        if st.button("🗑️ Limpiar Diario"):
+            if os.path.exists(ARCHIVO_DATOS): os.remove(ARCHIVO_DATOS); st.rerun()
 
-    # Opción de resetear identidad (Oculto al final)
-    with st.expander("Opciones de identidad"):
-        if st.button("⚠️ Resetear nombre y vínculo"):
+    # Reset oculto
+    with st.expander("Opciones"):
+        if st.button("⚠️ Reiniciar todo"):
             if os.path.exists(ARCHIVO_IDENTIDAD): os.remove(ARCHIVO_IDENTIDAD)
             st.rerun()
 
