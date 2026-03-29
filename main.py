@@ -7,32 +7,24 @@ from pypdf import PdfReader
 import os
 import plotly.express as px
 
-# Configuración con CSS para juntar las pestañas
-st.set_page_config(page_title="PocketAdmin", layout="wide", page_icon="🛡️")
+# 1. Configuración de página y Diseño CSS para juntar pestañas
+st.set_page_config(page_title="PocketAdmin: Control Total", layout="wide", page_icon="🛡️")
 
-# --- ESTILO CSS PERSONALIZADO ---
 st.markdown("""
     <style>
-    /* Juntar las pestañas y quitar márgenes excesivos */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    .stTabs [data-baseweb="tab"] { 
+        padding-left: 8px; 
+        padding-right: 8px; 
+        font-size: 14px; 
     }
-    .stTabs [data-baseweb="tab"] {
-        padding-left: 10px;
-        padding-right: 10px;
-        font-size: 14px;
-    }
-    /* Hacer que el contenedor principal sea menos ancho para evitar scroll lateral */
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
+    .block-container { padding-top: 1.5rem; }
     </style>
     """, unsafe_allow_html=True)
 
 ARCHIVO_DATOS = "mis_gastos.csv"
 
-# --- LÓGICA DE DATOS ---
+# --- FUNCIONES DE DATOS ---
 def cargar_datos():
     if os.path.exists(ARCHIVO_DATOS):
         df = pd.read_csv(ARCHIVO_DATOS)
@@ -53,12 +45,12 @@ def obtener_mensaje(df, nombre, genero, modo_control):
     base = f"Hola, soy **{nombre}** y estoy {adj} para **cuidar de ti y de tu dinero**."
     
     if modo_control:
-        return f"🛡️ {base}\n\n**Modo Control:** Todo bajo vigilancia. Llevamos **{total:.2f}€** registrados."
+        return f"🛡️ {base}\n\n**Modo Control:** Todo está bajo vigilancia. Llevamos **{total:.2f}€** registrados. Respira, tienes el mando."
     else:
-        return f"🌟 {base}\n\nLlevamos **{total:.2f}€** acumulados."
+        return f"🌟 {base}\n\nLlevamos un registro acumulado de **{total:.2f}€**."
 
-# --- PROCESADOR ---
-PALABRAS_FILTRO = ["mastercard", "visa", "tarjeta", "total", "iva", "base imponible", "subtotal", "efectivo", "cambio", "cif", "telefono", "atendido", "ticket", "factura"]
+# --- PROCESADOR CON FILTRO ---
+PALABRAS_FILTRO = ["mastercard", "visa", "tarjeta", "total", "iva", "base imponible", "subtotal", "efectivo", "cambio", "cif", "telefono", "atendido", "ticket", "factura", "mercadona", "importe"]
 
 def analizar_texto(texto):
     lineas = texto.split('\n')
@@ -78,9 +70,9 @@ def analizar_texto(texto):
 
 # --- INTERFAZ ---
 def main():
-    # Menú Lateral más discreto
+    # Menú Lateral
     with st.sidebar:
-        st.header("⚙️ Tú")
+        st.header("⚙️ Configuración")
         nombre_guia = st.text_input("Asistente", value="Ana")
         genero_guia = st.selectbox("Voz", ["Femenino", "Masculino"])
         modo_control = st.toggle("🆘 Modo Control", value=False)
@@ -88,11 +80,11 @@ def main():
     df_total = cargar_datos()
     st.chat_message("assistant").write(obtener_mensaje(df_total, nombre_guia, genero_guia, modo_control))
 
-    # Pestañas con nombres más cortos para que quepan
+    # Pestañas Compactas
     tab1, tab2, tab3 = st.tabs(["📥 Subir", "📊 Análisis", "📋 Historial"])
 
     with tab1:
-        archivos = st.file_uploader("Sube Tickets", type=['pdf', 'jpg', 'png', 'jpeg'], accept_multiple_files=True)
+        archivos = st.file_uploader("Sube uno o varios archivos", type=['pdf', 'jpg', 'png', 'jpeg'], accept_multiple_files=True)
         if archivos:
             if st.button(f"🚀 Procesar {len(archivos)} archivos"):
                 todos_los_items = []
@@ -107,20 +99,21 @@ def main():
                 
                 if todos_los_items:
                     guardar_datos(pd.DataFrame(todos_los_items, columns=['Fecha', 'Producto', 'Categoría', 'Precio']))
-                    st.success("Guardado.")
+                    st.success("Guardado con éxito.")
                     st.rerun()
 
     with tab2:
         if not df_total.empty:
-            st.plotly_chart(px.pie(df_total, values='Precio', names='Categoría', hole=0.5, height=300), use_container_width=True)
-            st.plotly_chart(px.line(df_total.groupby('Fecha')['Precio'].sum().reset_index(), x='Fecha', y='Precio', height=300), use_container_width=True)
+            c1, c2 = st.columns(2)
+            with c1: st.plotly_chart(px.pie(df_total, values='Precio', names='Categoría', hole=0.5, height=300), use_container_width=True)
+            with c2: st.plotly_chart(px.line(df_total.groupby('Fecha')['Precio'].sum().reset_index(), x='Fecha', y='Precio', height=300), use_container_width=True)
         else:
-            st.info("Sin datos.")
+            st.info("Sube datos para ver el análisis.")
 
     with tab3:
         st.write("### Mi Diario")
         st.dataframe(df_total, use_container_width=True)
-        if st.button("🗑️ Limpiar"):
+        if st.button("🗑️ Limpiar Todo"):
             if os.path.exists(ARCHIVO_DATOS): os.remove(ARCHIVO_DATOS); st.rerun()
 
 if __name__ == "__main__":
