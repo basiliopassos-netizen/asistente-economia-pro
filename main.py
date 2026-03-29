@@ -19,15 +19,8 @@ st.markdown("""
         font-size: 16px;
         font-weight: 500;
     }
-    /* Tarjetas de métricas personalizadas */
-    .metric-card {
-        background-color: #f0f2f6;
-        padding: 20px;
-        border-radius: 15px;
-        border-left: 5px solid #00c0f2;
-        margin-bottom: 20px;
-    }
-    .block-container { padding-top: 1rem; }
+    /* AJUSTE: Más aire arriba para que el emoji no se corte */
+    .block-container { padding-top: 3rem !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -75,7 +68,6 @@ def main():
         genero_guia = st.selectbox("Voz", ["Femenino", "Masculino"])
         modo_control = st.toggle("🛡️ Modo Control", value=False)
         st.divider()
-        st.write("Configura tu experiencia para reducir el estrés financiero.")
 
     df_total = cargar_datos()
     total_acumulado = df_total['Precio'].sum() if not df_total.empty else 0.0
@@ -85,22 +77,22 @@ def main():
     with st.container():
         col_avatar, col_text = st.columns([1, 5])
         with col_avatar:
-            st.write("# 🧘")
+            st.write("# 🧘") # Ahora con espacio suficiente arriba
         with col_text:
             msg = f"Hola, soy **{nombre_guia}**. Estoy {adj} para **cuidar de ti y de tu dinero**."
             if modo_control:
-                st.info(f"{msg}\n\n🛡️ **Modo Control:** Tenemos **{total_acumulado:.2f}€** bajo vigilancia total. Relájate, yo guardo los detalles.")
+                st.info(f"{msg}\n\n🛡️ **Modo Control:** Tenemos **{total_acumulado:.2f}€** bajo vigilancia total.")
             else:
                 st.success(f"{msg}\n\n🌟 Llevamos un registro de **{total_acumulado:.2f}€**.")
 
-    # Pestañas con Iconos y mejor diseño
-    tab1, tab2, tab3 = st.tabs(["📥 **Subir Tickets**", "📊 **Análisis**", "📋 **Historial**"])
+    # Pestañas con tus nombres preferidos
+    tab1, tab2, tab3 = st.tabs(["📥 **Subir**", "📊 **Mi Mapa**", "📜 **Diario**"])
 
     with tab1:
-        st.markdown(f"### 📥 Registro Múltiple")
-        archivos = st.file_uploader("Puedes arrastrar varios PDFs o Fotos a la vez", type=['pdf', 'jpg', 'png', 'jpeg'], accept_multiple_files=True)
+        st.markdown("### 📥 Registro de tickets")
+        archivos = st.file_uploader("Sube uno o varios archivos", type=['pdf', 'jpg', 'png', 'jpeg'], accept_multiple_files=True)
         if archivos:
-            if st.button(f"🚀 Procesar {len(archivos)} archivos de golpe"):
+            if st.button(f"🚀 Procesar {len(archivos)} archivos"):
                 todos_los_items = []
                 for archivo in archivos:
                     texto = ""
@@ -113,12 +105,12 @@ def main():
                 
                 if todos_los_items:
                     guardar_datos(pd.DataFrame(todos_los_items, columns=['Fecha', 'Producto', 'Categoría', 'Precio']))
-                    st.toast("¡Datos guardados con éxito!", icon='✅')
+                    st.toast("Guardado en tu diario", icon='✅')
                     st.rerun()
 
     with tab2:
         if not df_total.empty:
-            st.markdown("### 📊 ¿En qué estamos invirtiendo?")
+            st.markdown("### 📊 Mi Mapa de gastos")
             c1, c2 = st.columns(2)
             with c1:
                 st.plotly_chart(px.pie(df_total, values='Precio', names='Categoría', hole=0.5, height=350, 
@@ -127,12 +119,12 @@ def main():
                 df_fecha = df_total.groupby('Fecha')['Precio'].sum().reset_index()
                 st.plotly_chart(px.line(df_fecha, x='Fecha', y='Precio', title="Ritmo de gasto", height=350), use_container_width=True)
         else:
-            st.info("Aún no hay datos para analizar.")
+            st.info("Aún no hay datos en tu mapa.")
 
     with tab3:
-        st.markdown("### 📋 Mi Diario de Gastos")
+        st.markdown("### 📜 Mi Diario")
         st.dataframe(df_total, use_container_width=True)
-        if st.button("🗑️ Limpiar Historial"):
+        if st.button("🗑️ Limpiar Diario"):
             if os.path.exists(ARCHIVO_DATOS): os.remove(ARCHIVO_DATOS); st.rerun()
 
 if __name__ == "__main__":
