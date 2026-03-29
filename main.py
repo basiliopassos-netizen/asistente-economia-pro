@@ -38,4 +38,49 @@ def dibujar_jardin(items):
         random.seed(i) # Para que no bailen cada vez que refrescas
         cx, cy = random.randint(330, 470), random.randint(110, 250)
         radio = min(max(float(item['Precio']) * 2.5, 10), 35)
-        svg += f'<g cursor="pointer"><title>{item["Producto"]}: {item["Precio"]}€</title><circle cx="{cx}" cy="{cy}" r="{radio}" fill="#FF4444" stroke="white"/><text x="{cx}" y="{cy+4}" text-anchor="middle" fill="white" font-size
+        svg += f'<g cursor="pointer"><title>{item["Producto"]}: {item["Precio"]}€</title><circle cx="{cx}" cy="{cy}" r="{radio}" fill="#FF4444" stroke="white"/><text x="{cx}" y="{cy+4}" text-anchor="middle" fill="white" font-size="7" font-weight="bold">{item["Producto"][:4]}</text></g>'
+    
+    svg += "</svg></div>"
+    st.markdown(svg, unsafe_allow_html=True)
+
+# --- PROGRAMA PRINCIPAL ---
+def main():
+    presentacion_laura()
+    tab1, tab2, tab3 = st.tabs(["📤 Subir Tickets", "🌳 Mi Árbol", "📜 Diario"])
+
+    with tab1:
+        st.subheader("Cargador de Tickets")
+        archivos = st.file_uploader("Sube tus fotos o PDFs", type=['png', 'jpg', 'pdf'], accept_multiple_files=True)
+        
+        if archivos:
+            if st.button("✨ Procesar y desglosar ahora"):
+                for arc in archivos:
+                    # Simulamos que leemos el ticket y sacamos productos
+                    nuevos = [
+                        {"Fecha": datetime.now().strftime("%Y-%m-%d"), "Producto": f"Prod_{random.randint(1,99)}", "Precio": round(random.uniform(2, 15), 2), "Categoría": "Supermercado"},
+                        {"Fecha": datetime.now().strftime("%Y-%m-%d"), "Producto": f"Prod_{random.randint(1,99)}", "Precio": round(random.uniform(1, 5), 2), "Categoría": "Varios"}
+                    ]
+                    st.session_state.diario_detallado.extend(nuevos)
+                st.success("¡Hecho! Mira las otras pestañas.")
+
+    with tab2:
+        st.subheader("Tu Jardín Financiero")
+        if st.session_state.diario_detallado:
+            dibujar_jardin(st.session_state.diario_detallado)
+            total = sum(item['Precio'] for item in st.session_state.diario_detallado)
+            st.metric("Total en el Árbol", f"{total:.2f} €")
+        else:
+            st.info("El jardín está vacío. ¡Sube algún ticket para plantar frutos!")
+
+    with tab3:
+        st.subheader("📜 Diario de Gastos")
+        if st.session_state.diario_detallado:
+            df = pd.DataFrame(st.session_state.diario_detallado)
+            st.dataframe(df, use_container_width=True)
+            # Pequeño gráfico para ver por dónde se va el dinero
+            st.bar_chart(df.groupby('Categoría')['Precio'].sum())
+        else:
+            st.write("No hay nada anotado todavía.")
+
+if __name__ == "__main__":
+    main()
