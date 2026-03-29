@@ -5,3 +5,4 @@ pytesseract
 opencv-python-headless
 pypdf
 plotly
+google-generativeai
