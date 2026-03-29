@@ -28,11 +28,11 @@ def dibujar_jardin(datos):
     svg += '<rect x="385" y="240" width="30" height="160" fill="#5D4037" />'
     svg += '<circle cx="400" cy="200" r="130" fill="#2E7D32" opacity="0.9" />'
     
-    # Pareja Yoga (Chica y Chico)
+    # Pareja Yoga (Chica y Chico) bajo el árbol
     svg += '<g transform="translate(260, 390)"><circle cx="0" cy="0" r="10" fill="#FFCCBC"/><path d="M0 10 L-15 40 M0 10 L15 40" stroke="#E91E63" stroke-width="5" fill="none"/></g>'
     svg += '<g transform="translate(540, 390)"><circle cx="0" cy="0" r="10" fill="#FFCCBC"/><path d="M0 10 L-15 40 M0 10 L15 40" stroke="#2196F3" stroke-width="5" fill="none"/></g>'
 
-    # Frutos del dinero
+    # Frutos del dinero (bolitas rojas en el árbol)
     for nombre, precio in datos.items():
         cx, cy = random.randint(320, 480), random.randint(120, 280)
         r = min(max(float(precio) * 2, 12), 40)
@@ -45,29 +45,42 @@ def dibujar_jardin(datos):
 def main():
     presentacion_laura()
 
-    # Pestañas de navegación
     tab1, tab2, tab3 = st.tabs(["📤 Subir Tickets", "🌳 Mi Árbol", "📜 Diario de Gastos"])
 
     with tab1:
-        st.subheader("Sube las fotos de los gastos de las abuelas")
-        # Aquí permitimos múltiples archivos y fotos
-        fotos_tickets = st.file_uploader("Puedes arrastrar varias fotos a la vez", 
-                                        type=['png', 'jpg', 'jpeg', 'pdf'], 
-                                        accept_multiple_files=True)
+        st.subheader("Sube las fotos o PDFs de los gastos")
+        archivos = st.file_uploader("Puedes subir fotos (JPG/PNG) y también PDFs", 
+                                   type=['png', 'jpg', 'jpeg', 'pdf'], 
+                                   accept_multiple_files=True)
         
-        if fotos_tickets:
-            st.success(f"Has subido {len(fotos_tickets)} archivos correctamente.")
-            for foto in fotos_tickets:
-                st.image(foto, width=100, caption=foto.name)
+        if archivos:
+            st.success(f"Has subido {len(archivos)} archivos correctamente.")
+            cols = st.columns(4) # Organizamos en columnas para que no ocupe tanto
+            for i, archivo in enumerate(archivos):
+                with cols[i % 4]:
+                    # CORRECCIÓN AQUÍ: Solo intentamos mostrar imagen si NO es PDF
+                    if archivo.type == "application/pdf":
+                        st.metric("Documento", "📄 PDF")
+                        st.caption(archivo.name)
+                    else:
+                        st.image(archivo, use_container_width=True, caption=archivo.name)
 
     with tab2:
-        # Datos de ejemplo (Esto se conectará con tus tickets subidos)
-        gastos_actuales = {"Leche": 1.5, "Queso": 8.0, "Fruta": 4.2, "Pan": 1.0, "Carne": 12.5}
+        # Datos extraídos de tu imagen del Treemap original
+        gastos_reales = {
+            "Queso gouda": 7.8,
+            "Magdalena": 2.6,
+            "Tiramisu": 5.4,
+            "Horchata": 1.5,
+            "Nectarina": 1.9,
+            "Bronchales": 3.0,
+            "Nachos": 2.2
+        }
         st.subheader("Copa de tu Árbol Financiero")
-        dibujar_jardin(gastos_actuales)
+        dibujar_jardin(gastos_reales)
 
     with tab3:
-        st.info("Aquí verás la lista detallada de todo lo que Laura está cuidando por ti.")
+        st.info("Aquí verás la lista detallada de todo lo que Laura está guardando.")
 
 if __name__ == "__main__":
     main()
