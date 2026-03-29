@@ -7,12 +7,11 @@ from pypdf import PdfReader
 import os
 import plotly.express as px
 
-# Configuración con un toque más cálido
-st.set_page_config(page_title="PocketAdmin: Bienestar Financiero", layout="wide", page_icon="🧘")
+st.set_page_config(page_title="PocketAdmin: Control y Calma", layout="wide", page_icon="🛡️")
 
 ARCHIVO_DATOS = "mis_gastos.csv"
 
-# --- FUNCIONES DE MEMORIA ---
+# --- LÓGICA DE DATOS ---
 def cargar_datos():
     if os.path.exists(ARCHIVO_DATOS):
         df = pd.read_csv(ARCHIVO_DATOS)
@@ -26,33 +25,24 @@ def guardar_datos(df_nuevo):
     df_actualizado.to_csv(ARCHIVO_DATOS, index=False)
     return df_actualizado
 
-# --- MOTOR EMOCIONAL PERSONALIZADO ---
-def obtener_consejo_emocional(df, nombre_asistente, genero):
-    # Ajuste de género
-    bienvenida = "listo" if genero == "Masculino" else "lista" if genero == "Femenino" else "preparado"
+# --- MOTOR DE APOYO EMOCIONAL (HIPER FOCO) ---
+def obtener_mensaje_apoyo(df, nombre, modo_ansiedad):
+    total = df['Precio'].sum() if not df.empty else 0
     
-    if df.empty:
-        return f"👋 ¡Hola! Soy **{nombre_asistente}**. Estoy {bienvenida} para ayudarte a **cuidar de ti y de tu dinero**. Sube tu primer ticket y empezamos este viaje juntos."
-    
-    hoy = pd.Timestamp.now()
-    dia_mes = hoy.day
-    caprichos = df[df['Categoría'] == "Caprichos/Fugas"]['Precio'].sum()
-    
-    # Mensaje basado en el momento del mes
-    if dia_mes <= 7:
-        mensaje = f"🌟 **Fuerza inicial:** Soy {nombre_asistente}. Estamos a principios de mes. Es el mejor momento para cuidar de ti evitando gastos impulsivos. ¡Llevas {caprichos:.2f}€ en caprichos, mantén el foco!"
-    elif dia_mes >= 20:
-        mensaje = f"🧗 **Ánimo en la recta final:** Soy {nombre_asistente}. Queda poco para terminar el mes. Cuidar de tu dinero hoy es darte tranquilidad para mañana. ¡Respira, lo estás haciendo bien!"
+    if modo_ansiedad:
+        # Mensajes diseñados para bajar las pulsaciones y dar control
+        return f"""
+        🛡️ **Modo Control Activado**: Hola {nombre}, respira. Tener hiper foco en tus gastos hoy es tu **superpoder**, no tu enemigo. 
+        Estamos registrando todo con precisión. Llevamos **{total:.2f}€** bajo control absoluto. 
+        No hay sorpresas, solo datos. Vamos paso a paso, ticket a ticket. Estás al mando.
+        """
     else:
-        mensaje = f"⚖️ **Punto de equilibrio:** Soy {nombre_asistente}. Vamos a mitad de camino. Revisa tus compras de hoy, ¿te hacen sentir bien o son solo un impulso?"
-        
-    return mensaje
+        return f"🌟 **Modo Optimista**: ¡Hola {nombre}! Llevamos un registro de {total:.2f}€. Cada ticket subido es una decisión consciente para tu futuro."
 
-# --- PROCESADOR DE TEXTO ---
+# --- PROCESADOR ---
 CATEGORIAS = {
-    "Saludable": ["manzana", "pera", "verdura", "pollo", "pescado", "agua", "leche", "avena", "huevos", "legumbre", "fruta"],
-    "Caprichos/Fugas": ["chuches", "gominolas", "refresco", "coca", "cerveza", "vino", "alcohol", "chocolate", "bolleria", "donuts", "pizza", "patatas"],
-    "Higiene/Hogar": ["detergente", "champu", "gel", "crema", "desodorante", "jabon", "limpiador"]
+    "Esencial": ["agua", "leche", "huevos", "verdura", "pollo", "pan", "fruta", "arroz", "detergente", "jabon"],
+    "Capricho/Impulso": ["coca", "refresco", "chuches", "vino", "cerveza", "chocolate", "bolleria", "pizza", "patatas"],
 }
 
 def analizar_texto(texto):
@@ -73,26 +63,23 @@ def analizar_texto(texto):
 
 # --- INTERFAZ ---
 def main():
-    # --- CONFIGURACIÓN DE PERSONALIDAD EN EL LATERAL ---
-    st.sidebar.header("⚙️ Personalización")
-    nombre_asistente = st.sidebar.text_input("¿Cómo quieres que me llame?", value="Ana")
-    genero_asistente = st.sidebar.selectbox("Género del asistente", ["Femenino", "Masculino", "Neutro"])
+    # Menú Lateral para el estado mental
+    st.sidebar.header("🧠 Estado Mental")
+    nombre_asistente = st.sidebar.text_input("Nombre de tu guía", value="Ana")
+    modo_ansiedad = st.sidebar.toggle("Modo Control (Si sientes ansiedad)", value=False)
     
     df_total = cargar_datos()
     
-    st.title("🧘 PocketAdmin: Cuidando de ti")
-    
-    # EL MENSAJE HUMANO
-    with st.chat_message("assistant"):
-        st.write(obtener_consejo_emocional(df_total, nombre_asistente, genero_asistente))
+    # El mensaje de la IA se adapta a tu estado mental
+    st.chat_message("assistant").write(obtener_mensaje_apoyo(df_total, nombre_asistente, modo_ansiedad))
 
-    tab1, tab2, tab3 = st.tabs(["📸 Escáner de Bienestar", "📊 Mapa de Gastos", "📜 Diario Personal"])
+    tab1, tab2, tab3 = st.tabs(["📥 Registro de Control", "📈 Visualización de Calma", "📜 Mi Diario de Gastos"])
 
     with tab1:
-        st.write("### Sube tus tickets para que yo los analice por ti")
-        archivo = st.file_uploader("Arrastra aquí tu PDF o Foto", type=['pdf', 'jpg', 'png', 'jpeg'])
+        st.write("### Vuelca aquí tus gastos para sacarlos de tu cabeza")
+        archivo = st.file_uploader("Sube tu ticket (PDF o Foto)", type=['pdf', 'jpg', 'png', 'jpeg'])
         if archivo:
-            if st.button(f"🚀 {nombre_asistente}, analiza mi compra"):
+            if st.button("🚀 Registrar para ganar control"):
                 texto = ""
                 if archivo.type == "application/pdf":
                     reader = PdfReader(archivo)
@@ -102,27 +89,29 @@ def main():
                 
                 nuevos_datos = analizar_texto(texto)
                 if not nuevos_datos.empty:
-                    df_total = guardar_datos(nuevos_datos)
-                    st.success(f"¡Hecho! He guardado los datos para cuidar de tu economía.")
+                    guardar_datos(nuevos_datos)
+                    st.success("Dato registrado. Ya no tienes que recordarlo, yo lo guardo por ti.")
                     st.rerun()
 
     with tab2:
         if not df_total.empty:
-            c1, c2 = st.columns(2)
-            with c1:
-                st.plotly_chart(px.pie(df_total, values='Precio', names='Categoría', hole=.4, 
-                                     title="Distribución de tus prioridades",
-                                     color_discrete_sequence=px.colors.qualitative.Pastel), use_container_width=True)
-            with c2:
-                df_fecha = df_total.groupby('Fecha')['Precio'].sum().reset_index()
-                st.plotly_chart(px.line(df_fecha, x='Fecha', y='Precio', title="Tu ritmo emocional de gasto"), use_container_width=True)
+            st.write("### Análisis de tu seguridad financiera")
+            # Gráfico de líneas (Evolución)
+            fig_evol = px.line(df_total.groupby('Fecha')['Precio'].sum().reset_index(), 
+                               x='Fecha', y='Precio', title="Tu camino recorrido")
+            st.plotly_chart(fig_evol, use_container_width=True)
+            
+            # Categorías
+            fig_pie = px.pie(df_total, values='Precio', names='Categoría', hole=0.5, 
+                             color_discrete_sequence=px.colors.sequential.Teal)
+            st.plotly_chart(fig_pie, use_container_width=True)
         else:
-            st.info("Cuando subas tu primer ticket, aquí verás cómo evoluciona tu bienestar.")
+            st.info("Cuando estés listo, registra tu primer movimiento.")
 
     with tab3:
-        st.write("### Tu historial completo")
-        st.dataframe(df_total, use_container_width=True)
-        if st.button("🗑️ Resetear Diario"):
+        st.write("### Historial detallado")
+        st.table(df_total) # Uso tabla simple para más claridad
+        if st.button("🗑️ Resetear (Empezar de cero)"):
             if os.path.exists(ARCHIVO_DATOS): os.remove(ARCHIVO_DATOS); st.rerun()
 
 if __name__ == "__main__":
