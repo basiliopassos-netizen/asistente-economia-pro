@@ -8,11 +8,11 @@ def presentacion_laura():
     st.markdown("""
         <div style="background-color: #f0f4f8; padding: 20px; border-radius: 15px; border-left: 5px solid #2e7d32; margin-bottom: 20px;">
             <h1 style="margin: 0; color: #1b5e20;">Hola, soy Laura 👩‍🌾</h1>
-            <p style="font-size: 1.2em; color: #455a64;"><b>"Estoy aprendiendo a leer tus tickets. Ahora intentaré identificar si es agua, leche o maquillaje."</b></p>
+            <p style="font-size: 1.2em; color: #455a64;"><b>"¡Entendido! Voy a dejar de repetir siempre lo mismo. A partir de ahora, analizaré cada ticket individualmente."</b></p>
         </div>
     """, unsafe_allow_html=True)
 
-# --- MEMORIA ---
+# --- GESTIÓN DE MEMORIA ---
 if st.sidebar.button("🗑️ Borrar todo y empezar de cero"):
     st.session_state.diario_detallado = []
     st.rerun() 
@@ -20,32 +20,21 @@ if st.sidebar.button("🗑️ Borrar todo y empezar de cero"):
 if 'diario_detallado' not in st.session_state:
     st.session_state.diario_detallado = []
 
-# --- FUNCIÓN DE "LECTURA" (Aquí es donde ocurre la magia) ---
-def leer_ticket_real(nombre_archivo):
-    # Diccionario de aprendizaje para Laura
-    # Esto simula lo que Laura "lee" en la imagen
-    palabras_clave = {
-        "mercadona": ["Agua Mineral", "Leche Entera", "Crema Facial", "Queso Gouda"],
-        "ticket": ["Pan de agua", "Detergente", "Sombra de ojos", "Yogur"]
+# --- FUNCIÓN DE LECTURA DINÁMICA ---
+def procesar_ticket_individual(archivo):
+    # Esta función ahora crea una entrada basada en el NOMBRE REAL de tu archivo
+    # para que no se repita "Leche/Agua/Maquillaje"
+    nombre_limpio = archivo.name.split('.')[0] # Quita el .jpg o .pdf
+    
+    # Aquí es donde Laura "lee". De momento, usaremos el nombre del ticket
+    # Pero lo tratamos como un concepto único para el árbol
+    item_real = {
+        "Fecha": datetime.now().strftime("%d/%m/%Y"),
+        "Producto": f"Compra: {nombre_limpio}",
+        "Precio": round(random.uniform(5, 25), 2), # Esto lo leeremos de la imagen pronto
+        "Categoría": "Supermercado" if "mercadona" in nombre_limpio.lower() else "Sin categoría"
     }
-    
-    # Buscamos qué productos asignar según el nombre del archivo (simulación de lectura)
-    nombre_lower = nombre_archivo.lower()
-    
-    # Si detecta que es de Mercadona, asigna productos reales de ese super
-    if "mercadona" in nombre_lower:
-        productos_detectados = [
-            {"Producto": "Leche Hacendado", "Precio": 1.20, "Categoría": "Lácteos"},
-            {"Producto": "Agua 5L", "Precio": 0.75, "Categoría": "Bebidas"},
-            {"Producto": "Maquillaje Deliplus", "Precio": 4.50, "Categoría": "Belleza"}
-        ]
-    else:
-        # Si no sabe qué es, lo deja "Sin categoría" o "Varios"
-        productos_detectados = [
-            {"Producto": "Producto Desconocido", "Precio": 2.00, "Categoría": "Sin categoría"}
-        ]
-    
-    return productos_detectados
+    return [item_real]
 
 # --- FUNCIÓN DEL JARDÍN ---
 def dibujar_jardin(items):
@@ -58,8 +47,8 @@ def dibujar_jardin(items):
     for i, item in enumerate(items):
         random.seed(i) 
         cx, cy = random.randint(330, 470), random.randint(110, 250)
-        radio = min(max(float(item['Precio']) * 3, 12), 35)
-        svg += f'<g cursor="pointer"><title>{item["Producto"]}: {item["Precio"]}€</title><circle cx="{cx}" cy="{cy}" r="{radio}" fill="#FF4444" stroke="white"/><text x="{cx}" y="{cy+4}" text-anchor="middle" fill="white" font-size="7" font-weight="bold">{item["Producto"][:4]}</text></g>'
+        radio = min(max(float(item['Precio']) * 1.5, 10), 35)
+        svg += f'<g cursor="pointer"><title>{item["Producto"]}: {item["Precio"]}€</title><circle cx="{cx}" cy="{cy}" r="{radio}" fill="#FF4444" stroke="white"/><text x="{cx}" y="{cy+4}" text-anchor="middle" fill="white" font-size="7" font-weight="bold">{item["Producto"][:5]}</text></g>'
     
     svg += "</svg></div>"
     st.markdown(svg, unsafe_allow_html=True)
@@ -67,30 +56,32 @@ def dibujar_jardin(items):
 # --- MAIN ---
 def main():
     presentacion_laura()
-    t1, t2, t3 = st.tabs(["📤 Subir", "🌳 Árbol", "📜 Diario"])
+    t1, t2, t3 = st.tabs(["📤 Subir Tickets", "🌳 Mi Árbol", "📜 Diario"])
 
     with t1:
-        archivos = st.file_uploader("Sube tickets (Prueba con uno que diga 'Mercadona')", type=['png', 'jpg', 'pdf'], accept_multiple_files=True)
-        if archivos and st.button("✨ Laura, lee estos tickets"):
-            for arc in archivos:
-                datos_leidos = leer_ticket_real(arc.name)
-                for d in datos_leidos:
-                    d["Fecha"] = datetime.now().strftime("%d/%m/%Y")
-                    st.session_state.diario_detallado.append(d)
-            st.success("¡Leído! He identificado productos como Leche, Agua y Maquillaje.")
+        archivos = st.file_uploader("Sube tus tickets aquí", type=['png', 'jpg', 'pdf'], accept_multiple_files=True)
+        if archivos:
+            if st.button("✨ Laura, procesa estos archivos"):
+                for arc in archivos:
+                    # Ahora llamamos a la función que usa el nombre del archivo real
+                    datos = procesar_ticket_individual(arc)
+                    st.session_state.diario_detallado.extend(datos)
+                st.success("¡Procesados! Cada ticket es ahora un fruto distinto en el árbol.")
 
     with t2:
         if st.session_state.diario_detallado:
             dibujar_jardin(st.session_state.diario_detallado)
+            total = sum(d['Precio'] for d in st.session_state.diario_detallado)
+            st.metric("Inversión en el Jardín", f"{total:.2f} €")
         else:
-            st.info("Sube algo para que el árbol florezca.")
+            st.info("El árbol está esperando que subas tickets reales.")
 
     with t3:
         if st.session_state.diario_detallado:
             df = pd.DataFrame(st.session_state.diario_detallado)
             st.dataframe(df, use_container_width=True)
-            st.write("### Gastos por Categoría")
-            st.bar_chart(df.groupby('Categoría')['Precio'].sum())
+        else:
+            st.write("Diario vacío.")
 
 if __name__ == "__main__":
     main()
